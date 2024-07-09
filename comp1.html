@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <title>Computation PDF Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+        }
+        .container {
+            max-width: 90%;
+            margin: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .form-group button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+        .output {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            padding: 10mm;
+            box-sizing: border-box;
+        }
+h1{
+            font-size: 40px;
+        }
+        td{
+            font-size: 22px;
+            padding: 4px;
+        }
+        .bold_text {
+        font-weight: bold;
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Computation PDF Generator</h1>
+        <div class="form-group">
+            <label for="fileInput">Upload JSON File:</label>
+            <input type="file" id="fileInput" accept=".json">
+        </div>
+        <div class="form-group">
+            <label for="gender">Gender:</label>
+            <select id="gender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="regime">Regime:</label>
+            <select id="regime">
+                <option value="Old Regime">Old Regime</option>
+                <option value="New Regime">New Regime</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="acknowledgement">Acknowledgement:</label>
+            <input type="text" id="acknowledgement">
+        </div>
+        <div class="form-group">
+            <button id="generateBtn">Generate Computation Data</button>
+        </div>
+        <div id="output" class="output"></div>
+        <div class="form-group">
+            <button id="exportPdfBtn">Export as PDF</button>
+        </div>
+    </div>
+
+    <!-- Include jsPDF, dompurify, and html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.6/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+    <script>
+        function downloadDivAsPDF() {
+            var element = document.getElementById('output');
+            var opt = {
+                margin:       1,
+                filename:     'myfile.pdf',
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        } -->
+    </script>
+    <script>
+        document.getElementById('generateBtn').addEventListener('click', function() {
+            const fileInput = document.getElementById('fileInput');
+            const gender = document.getElementById('gender').value;
+            const regime = document.getElementById('regime').value;
+            const acknowledgement = document.getElementById('acknowledgement').value;
+
+            if (fileInput.files.length === 0) {
+                alert('Please upload a JSON file.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const json = JSON.parse(event.target.result);
+                const output = processJson(json, gender, regime, acknowledgement);
+                document.getElementById('output').innerHTML = output;
+            };
+
+            reader.readAsText(file);
+        });
+
+        function processJson(json, gender, regime, acknowledgement) {
+            // const total_other_income = 100;
+            const name = json['ITR']['ITR4']['Verification']['Declaration']['AssesseeVerName'] || 'N/A';
+            const ay = json['ITR']['ITR4']['Form_ITR4']['AssessmentYear'] || 'N/A';
+            const address_data = json['ITR']['ITR4']['PersonalInfo']['Address'];
+            const excluded_keys = ["Phone", 'StateCode','CountryCode','CountryCodeMobile', 'MobileNo', 'EmailAddress'];
+            const address_values = Object.keys(address_data).filter(key => !excluded_keys.includes(key)).map(key => address_data[key]);
+            const address = address_values.join(', ') || 'N/A';
+            const mob = address_data['MobileNo'] || 'N/A';
+            const email = address_data['EmailAddress'] || 'N/A';
+            const pan = json['ITR']['ITR4']['PersonalInfo']['PAN'] || 'N/A';
+            const status = 'Individual';
+            const dob = json['ITR']['ITR4']['PersonalInfo']['DOB'] || 'N/A';
+            const res_status = 'Resident';
+            const father = json['ITR']['ITR4']['Verification']['Declaration']['FatherName'] || 'N/A';
+            const ac = json['ITR']['ITR4']['Refund']['BankAccountDtls']['AddtnlBankDetails'][0]['BankAccountNo'] || 'N/A';
+            const ifsc = json['ITR']['ITR4']['Refund']['BankAccountDtls']['AddtnlBankDetails'][0]['IFSCCode'] || 'N/A';
+            const filing_status = 'Filed';
+            const aadhar = json['ITR']['ITR4']['PersonalInfo']['AadhaarCardNo'] || 'N/A';
+            const IncomeFromBusinessProf = json['ITR']['ITR4']['IncomeDeductions']['IncomeFromBusinessProf'] || 0;
+            const income = json['ITR']['ITR4']['IncomeDeductions']['IncomeFromBusinessProf'] || 0;
+            const other_income = json['ITR']['ITR4']['IncomeDeductions']['IncomeOthSrc'] || 0;
+            const exempt_income = 0;
+            const gross_income = json['ITR']['ITR4']['IncomeDeductions']['GrossTotIncome'] || 0;
+            const deductions = 0;
+            const rounded_off = json['ITR']['ITR4']['IncomeDeductions']['TotalIncome'] || 0;
+            const special_rates_tax = json['ITR']['ITR4']['TaxComputation']['TotalTaxPayable'] || 0;
+
+            const total_tax = special_rates_tax;
+            const rebate = json['ITR']['ITR4']['TaxComputation']['Rebate87A'] || 0;
+            const tax_payable = json['ITR']['ITR4']['TaxComputation']['TaxPayableOnRebate'] || 0;
+            const tds = json['ITR']['ITR4']['TaxPaid']['TaxesPaid']['TDS'] || 0;
+            const tds_round = Math.round(tds);
+            const gross_total_income = json['ITR']['ITR4']['IncomeDeductions']['GrossTotIncome'] || 0;
+            const total_net_income = json['ITR']['ITR4']['IncomeDeductions']['TotalIncome'] || 0;
+            const bank = json['ITR']['ITR4']['Refund']['BankAccountDtls']['AddtnlBankDetails'][0]['BankName'] || 'N/A';
+            const b_code = json['ITR']['ITR4']['ScheduleBP']['NatOfBus44AD'][0]['CodeAD'];
+            const b_nature = codes[b_code]
+            const b_trade_name = json['ITR']['ITR4']['ScheduleBP']['NatOfBus44AD'][0]['NameOfBusiness'];
+            const sundry_deb = json['ITR']['ITR4']['ScheduleBP']['FinanclPartclrOfBusiness']['SundryDebtors']
+            const sundry_cred = json['ITR']['ITR4']['ScheduleBP']['FinanclPartclrOfBusiness']['SundryCreditors']
+            const inventory = json['ITR']['ITR4']['ScheduleBP']['FinanclPartclrOfBusiness']['Inventories']
+            const cash = json['ITR']['ITR4']['ScheduleBP']['FinanclPartclrOfBusiness']['CashInHand']
+            const total_other_income = other_income
+            
+            // Ensure business details are present and are an array
+            const business_details = Array.isArray(json['ITR']['ITR4']['ScheduleBP']['NatOfBus44AD']) ? json['ITR']['ITR4']['ScheduleBP']['NatOfBus44AD'].map((business, index) => {
+                const b_code = business['CodeAD'] || 'N/A';
+                const b_nature = codes[b_code] || 'N/A';
+                const b_trade_name = business['NameOfBusiness'] || 'N/A';
+                const sundry_deb = business['SundryDebtors'] || 0;
+                const sundry_cred = business['SundryCreditors'] || 0;
+                const inventory = business['Inventories'] || 0;
+                const cash = business['CashInHand'] || 0;
+                return `Business ${index + 1}: Code - ${b_code}, Nature - ${b_nature}, Trade Name - ${b_trade_name}, Sundry Debtors - ${sundry_deb}, Sundry Creditors - ${sundry_cred}, Inventory - ${inventory}, Cash - ${cash}`;
+            }).join('<br>') : 'No business details available.';
+
+            // Ensure other income details are present and are an array
+            const other_income_details = Array.isArray(json['ITR']['ITR4']['IncomeDeductions']['IncomeOthSrc']) ? json['ITR']['ITR4']['IncomeDeductions']['IncomeOthSrc'].map((income, index) => {
+                return `Other Income ${index + 1}: ${income}`;
+            }).join('<br>') : 'No other income details available.';
+
+            return `
+                <table style="width: 1020px; height: 57px;">
+        <tbody>
+        <tr>
+        <td style="width: 493.167px;">
+        <h1>${name}</h1>
+        </td>
+        <td style="width: 536.033px; text-align: right; font-size: 20px">
+        <h1>${ay}</h1>
+        </td>
+        </tr>
+        </tbody>
+        </table>
+        <table style="width: 1021.8px;">
+        <tbody>
+        <tr>
+        <td style="width: 1022.8px;">
+        <p>Address: ${address}</p>
+        </td>
+        </tr>
+        </tbody>
+        </table>
+        <table style="height: 60px; width: 1021.8px;">
+        <tbody>
+        <tr style="height: 37px;">
+        <td style="width: 1011.8px; height: 37px;">
+        <p>Mobile:${mob}</p>
+        </td>
+        </tr>
+        <tr style="height: 22.2px;">
+        <td style="width: 1011.8px; height: 22.2px;">
+        <h4>E-Mail:${email}</h4>
+        </td>
+        </tr>
+        </tbody>
+        </table>
+        <table style="width: 1022.8px;">
+            <tbody>
+            <tr style="height: 47.1333px;">
+            <td style="width: 1012.8px; height: 47.1333px;">
+            <h2 class = "bold_text" style="text-align: center;"><span style="color: #a50202;">Computation of Income (ITR4)</span></h2>
+            </td>
+            </tr>
+            </tbody>
+            </table>
+        <table style="width: 1024px; float: left;">
+        <tbody>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 135px; height: 13px;">PAN: </td>
+        <td style="width: 320.5px; height: 13px;">&nbsp;${pan}</td>
+        <td class = "bold_text" style="width: 288.5px; height: 13px;">Status:</td>
+        <td style="width: 283px; height: 13px;">&nbsp;${status}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 135px; height: 13px;">Date of Birth</td>
+        <td style="width: 289.5px; height: 13px;">&nbsp;${dob}</td>
+        <td class = "bold_text" style="width: 288.5px; height: 13px;">Residential Status:</td>
+        <td style="width: 283px; height: 13px;">&nbsp;${res_status}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 180px; height: 13px;">Father's Name:</td>
+        <td style="width: 289.5px; height: 13px;">&nbsp;${father}</td>
+        <td class = "bold_text" style="width: 288.5px; height: 13px;">Gender</td>
+        <td style="width: 283px; height: 13px;">&nbsp;${gender}</td>
+        </tr>
+        <tr style="height: 13.9333px;">
+        <td class = "bold_text" style="width: 135px; height: 13.9333px;">Bank A/C no.:</td>
+        <td style="width: 289.5px; height: 13.9333px;">&nbsp;${ac}</td>
+        <td class = "bold_text" style="width: 288.5px; height: 13.9333px;">IFSC code:</td>
+        <td style="width: 283px; height: 13.9333px;">&nbsp;${ifsc}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 135px; height: 13px;">E-Filing Status:</td>
+        <td style="width: 289.5px; height: 13px;">&nbsp;${filing_status}</td>
+        <td class = "bold_text" style="width: 288.5px; height: 13px;">Aadhaar Card Number:</td>
+        <td style="width: 283px; height: 13px;">&nbsp;${aadhar}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 135px; height: 13px;">Selected tax:</td>
+
+        <td style="width: 289.5px; height: 13px;">&nbsp;${regime}</td>
+        <td class = "bold_text" style="width: 288.5px; height: 13px;">Acknowledgement:</td>
+        <td style="width: 283px; height: 13px;">${acknowledgement}</td>
+        </tr>
+        </tbody>
+        </table>
+        <table style="width: 1022.8px;">
+        <tbody>
+        <tr style="height: 47.1333px;">
+        <td style="width: 1012.8px; height: 47.1333px;">
+        <h2 style="text-align: center;"><span style="color: #a50202;">Tax Summary:</span></h2>
+        </td>
+        </tr>
+        </tbody>
+        </table>
+        <table style="width: 1024px;">
+        <tbody>
+        <tr style="height: 13px;">
+        <td style="width: 513.033px; height: 13px;">income from Business/Profession</td>
+        <td style="width: 496.167px; height: 13px; text-align: right;">&nbsp;${IncomeFromBusinessProf}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 513.033px; height: 13px;">Income From other sources</td>
+        <td style="width: 496.167px; height: 13px;">&nbsp;</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td style="width: 513.033px; height: 13px;">Other Income</td>
+        <td style="width: 496.167px; height: 13px; text-align: right;">${other_income}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td style="width: 513.033px; height: 13px;">Exempt Income (not included in Total Income)</td>
+        <td style="width: 496.167px; height: 13px; text-align: right;">${exempt_income}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 513.033px; text-align: left; height: 13px;">Gross Total Income</td>
+        <td class = "bold_text" style="width: 496.167px; height: 13px; text-align: right;">&nbsp;${gross_income}</td>
+        </tr>
+        <tr style="height: 13.9333px;">
+        <td class = "bold_text" style="width: 513.033px; height: 13.9333px;">Less: Total Deductions</td>
+        <td style="width: 496.167px; height: 13.9333px; text-align: right;">&nbsp;${deductions}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td style="width: 513.033px; height: 13px;">Net Income (Rounded off u/s 288 A)</td>
+        <td style="width: 496.167px; height: 13px; text-align: right;">&nbsp;${rounded_off}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td style="width: 513.033px; height: 13px;">Income Tax other than Special Rates</td>
+        <td style="width: 496.167px; height: 13px; text-align: right;">&nbsp;${special_rates_tax}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 513.033px; height: 13px;">Total Tax</td>
+        <td style="width: 496.167px; height: 13px; text-align: right;">&nbsp;${total_tax}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td style="width: 513.033px; height: 13px;">Less : Income Tax Rebate (Sec.87A)</td>
+        <td style="width: 496.167px; height: 13px; text-align: right;">&nbsp;${rebate}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 513.033px; height: 13px;">Tax Payable</td>
+        <td style="width: 496.167px; height: 13px; text-align: right;">&nbsp;${tax_payable}</td>
+        </tr>
+        </tbody>
+        </table>
+        <table style="width: 1022.8px;">
+            <tbody>
+            <tr style="height: 47.1333px;">
+            <td style="width: 1012.8px; height: 47.1333px;">
+            <h2 style="text-align: center;"><span style="color: #a50202;">Less: Taxes Paid(TDS)</span></h2>
+            </td>
+            </tr>
+            </tbody>
+            </table>
+        <div>
+        <table style="width: 1024px; height: 40px;">
+        <tbody>
+        <tr>
+        <td style="width: 541px;">Tax Deducted at Source (TDS)</td>
+        <td style="width: 467px; text-align: right;">&nbsp;${tds}</td>
+        </tr>
+        <tr>
+        <td style="width: 541px;">Net Tax Refund ( Rounded off u/s 288 B )</td>
+        <td class = "bold_text" style="width: 467px; text-align: right;">&nbsp;${tds_round}</td>
+        </tr>
+        </tbody>
+        </table>
+        </div>
+        <table style="width: 1022.8px;">
+            <tbody>
+            <tr style="height: 47.1333px;">
+            <td style="width: 1012.8px; height: 47.1333px;">
+            <h2 style="text-align: center;"><span style="color: #a50202;">Computation of Total Income</span></h2>
+            </td>
+            </tr>
+            </tbody>
+            </table>
+        <div>
+        <table style="height: 78px;" width="1027">
+        <tbody>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 506.1px; height: 13px;">Income Heads</td>
+        <td class = "bold_text" style="width: 506.1px; text-align: right; height: 13px;">&nbsp;Taxable Income</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td style="width: 506.1px; height: 13px;">Business/Profession</td>
+        <td style="width: 506.1px; text-align: right; height: 13px;">&nbsp;${IncomeFromBusinessProf}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td style="width: 506.1px; height: 13px;">Other Income</td>
+        <td style="width: 506.1px; text-align: right; height: 13px;">&nbsp;${other_income}</td>
+        </tr>
+        <tr style="height: 13.4667px;">
+        <td style="width: 506.1px; height: 13.4667px;">&nbsp;</td>
+        <td style="width: 506.1px; text-align: right; height: 13.4667px;">&nbsp;</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 506.1px; height: 13px;">Gross Total Income</td>
+        <td class = "bold_text" style="width: 506.1px; text-align: right; height: 13px;">&nbsp;${gross_total_income}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td style="width: 506.1px; height: 13px;">Less : Deduction under Chapter VI-A</td>
+        <td style="width: 506.1px; text-align: right; height: 13px;">&nbsp;${deductions}</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 506.1px; height: 13px;">Total Net Income</td>
+        <td class = "bold_text" style="width: 506.1px; text-align: right; height: 13px;">&nbsp;${total_net_income}</td>
+        </tr>
+        </tbody>
+        </table>
+        </div>
+        <table style="width: 1022.8px;">
+            <tbody>
+            <tr style="height: 47.1333px;">
+            <td style="width: 1012.8px; height: 47.1333px;">
+            <h2 style="text-align: center;"><span style="color: #a50202;">Bank Account Details</span></h2>
+            </td>
+            </tr>
+            </tbody>
+            </table>
+        <table style="width: 1028px; height: 54px;" border="2">
+        <tbody>
+        <tr>
+        <td class = "bold_text" style="width: 335.867px;">IFSC Code</td>
+        <td class = "bold_text" style="width: 335.867px; text-align: center;">Name of the Bank</td>
+        <td class = "bold_text" style="width: 335.867px; text-align: center;">Account No.</td>
+        </tr>
+        <tr>
+        <td style="width: 335.867px;">&nbsp;${ifsc}</td>
+        <td style="width: 335.867px; text-align: center;">${bank}</td>
+        <td style="width: 335.867px; text-align: center;">${ac}</td>
+        </tr>
+        </tbody>
+        </table>
+        <table style="width: 1022.8px;">
+            <tbody>
+            <tr style="height: 47.1333px;">
+            <td style="width: 1012.8px; height: 47.1333px;">
+            <h2 style="text-align: center;"><span style="color: #a50202;">Taxable Other Income:${other_income}</span></h2>
+            </td>
+            </tr>
+            </tbody>
+            </table>
+        <div>
+        <table style="width: 1029px; height: 77px;">
+        <tbody>
+        <tr style="height: 18px;">
+        <td class = "bold_text" style="width: 507.5px; height: 18px;">Income Heads</td>
+        <td class = "bold_text" style="width: 506.5px; height: 18px; text-align: right;">Taxable</td>
+        </tr>
+        <tr style="height: 18.9334px;">
+        <td style="width: 507.5px; height: 18.9334px;">Other Income</td>
+        <td style="width: 506.5px; height: 18.9334px; text-align: right;">&nbsp;${other_income}</td>
+        </tr>
+        <tr style="height: 18px;">
+        <td class = "bold_text" style="width: 507.5px; height: 18px;">Total Other Income</td>
+        <td class = "bold_text" style="width: 506.5px; height: 18px; text-align: right;">&nbsp;${total_other_income}</td>
+        </tr>
+        </tbody>
+        </table>
+        </div>
+        <table style="width: 1022.8px;">
+            <tbody>
+            <tr style="height: 47.1333px;">
+            <td style="width: 1012.8px; height: 47.1333px;">
+            <h2 style="text-align: center;"><span style="color: #a50202;">Taxable Business / Profession: ${IncomeFromBusinessProf}</span></h2>
+            </td>
+            </tr>
+            </tbody>
+            </table>
+        <div>
+        <div>
+        <table style="width: 1024px; height: 27px;" border="2">
+        <tbody>
+        <tr>
+        <td class = "bold_text" style="width: 442px;">Business nature</td>
+        <td class = "bold_text" style="width: 105.683px; text-align: center;">Business code</td>
+        <td class = "bold_text" style="width: 448.317px; text-align: right;">Trade Name</td>
+        </tr>
+        <tr>
+        <td style="width: 442px;">&nbsp;${b_nature}</td>
+        <td style="width: 105.683px; text-align: center;">${b_code}</td>
+        <td style="width: 448.317px; text-align: right;">${b_trade_name}</td>
+        </tr>
+        <!-- <tr>
+            <td style="width: 442px;">&nbsp;Travel agencies and tour operators</td>
+            <td style="width: 105.683px; text-align: center;">11001</td>
+            <td style="width: 448.317px; text-align: right;">${b_trade_name}</td>
+            </tr> -->
+
+        </tbody>
+        </table>
+        </div>
+        </div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>
+        <table style="width: 1027.5px; height: 55px;">
+        <tbody>
+        <tr style="height: 13.8667px;">
+        <td class = "bold_text" style="width: 503px; height: 13.8667px;">Particulars</td>
+        <td class = "bold_text" style="width: 703px; text-align: center; height: 13.8667px;">Digital and Non-Digital Transactions</td>
+        <td class = "bold_text" style="width: 509.5px; text-align: right; height: 13.8667px;">Total</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td style="width: 503px; height: 13px;">Gross Receipt</td>
+        <td class = "bold_text" style="width: 503px; text-align: center; height: 13px;">&nbsp;${IncomeFromBusinessProf}</td>
+        <td class = "bold_text" style="width: 509.5px; text-align: right; height: 13px;">&nbsp;${IncomeFromBusinessProf}&nbsp;</td>
+        </tr>
+        <tr style="height: 13px;">
+        <td class = "bold_text" style="width: 503px; height: 13px;">Income u/s 44AD</td>
+        <td style="width: 503px; height: 13px;">&nbsp;</td>
+        <td style="width: 509.5px; height: 13px;">&nbsp;</td>
+        </tr>
+        </tbody>
+        </table>
+        </div>
+        <table style="width: 1022.8px;">
+            <tbody>
+            <tr style="height: 47.1333px;">
+            <td style="width: 1012.8px; height: 47.1333px;">
+            <h2 style="text-align: center;"><span style="color: #a50202;">Financial Particulars</span></h2>
+            </td>
+            </tr>
+            </tbody>
+        
+        <div>
+        <table style="width: 1023px; height: 21px;">
+        <tbody>
+        <tr>
+        <td class = "bold_text" style="width: 1013.8px; text-align: left;"><h3>In case of presumptive income</h3</td>
+        </tr>
+        <tr>
+        <td style="width: 1013.8px; text-align: center;">Financial particulars as on 31/03/2024</td>
+        </tr>
+        </tbody>
+        </table>
+        </div>
+        <div>
+        <table style="width: 1023px;" border="2">
+        <tbody>
+        <tr>
+        <td class = "bold_text" style="width: 492px;">Sundry Debtors</td>
+        <td style="width: 515px; text-align: right;">&nbsp;${sundry_deb}</td>
+        </tr>
+        <tr>
+        <td class = "bold_text" style="width: 492px;">Sundry Creditors</td>
+        <td style="width: 515px; text-align: right;">&nbsp;${sundry_cred}</td>
+        </tr>
+        <tr>
+        <td class = "bold_text" style="width: 492px;">Stock-in-trade</td>
+        <td style="width: 515px; text-align: right;">&nbsp;${inventory}</td>
+        </tr>
+        <tr>
+        <td class = "bold_text" style="width: 492px;">Cash Balance</td>
+        <td style="width: 515px; text-align: right;">&nbsp;${cash}</td>
+        </tr>
+        </tbody>
+        </table>
+        </div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <h2>&nbsp;</h2>
+        <h2>Signature</h2>
+        <h3>For ${name}</h3>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <h2 style="text-align: center;">&nbsp;</h2>
+
+            `;
+        }
+
+        // Mocked codes mapping for demonstration purposes
+        const codes = {
+            "001": "Retail",
+            "002": "Manufacturing",
+            "003": "IT Services"
+        };
+
+        document.getElementById('exportPdfBtn').addEventListener('click', function() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const content = document.getElementById('output');
+
+            doc.html(content, {
+                callback: function (doc) {
+                    doc.save('computation.pdf');
+                },
+                x: 10, // x offset
+                y: 20, // y offset
+                width: 190, // Maximum width of content on A4 paper
+                windowWidth: 900
+            });
+        });
+
+
+    </script>
+</body>
+</html>
